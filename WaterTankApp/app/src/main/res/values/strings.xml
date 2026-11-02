@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Water Tank V5</string>
+    <string name="system_title">Water Tank Management V5</string>
+    <string name="system_subtitle">Master &amp; Multi-Slave Automated Control</string>
+
+    <string name="system_status">System Status</string>
+    <string name="pump_label">Pump</string>
+    <string name="active_tank_label">Active Tank</string>
+    <string name="server_state_label">Server</string>
+
+    <string name="tank_levels_title">Tank Water Levels</string>
+    <string name="valve_status_title">Valve Status</string>
+    <string name="tank_selection_title">Tank Selection</string>
+    <string name="automation_control_title">System Automation Control</string>
+    <string name="device_network_title">ESP32 Network Status</string>
+    <string name="faults_title">System Faults &amp; Troubleshooting</string>
+
+    <string name="start_filling">START FILLING</string>
+    <string name="stop_all">STOP ALL</string>
+
+    <string name="default_server_url">http://water.nubeera.com</string>
+</resources>
+

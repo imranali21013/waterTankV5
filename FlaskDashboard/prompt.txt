@@ -1,0 +1,6 @@
+now i need to add Tank select buttons on dashboard also like side On Off Switch
+when Page load it will use ESP32 and Switch selection as defualt, and set it On or Off instead of **SELECTED**  or **NOT SELECTED**  in Tank Selection section
+also add post request if switch position change so i can use Dashboard also as switch control
+same concept will be use for Start and Stop buttons but it will normal push to command button
+in Valve Status section use on off switch,  here we have Closed, Opening, Closing, Opned , so for Closed and Closing off state and other both On status, but add a label for better understanding with differ colors
+dont provide Project Zip, instead give codes in chats one by one with path as previous

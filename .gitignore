@@ -1,0 +1,6 @@
+# Build tools
+.build_tools/
+
+# Build outputs
+build/
+.gradle/

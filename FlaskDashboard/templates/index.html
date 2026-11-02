@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Level Management V5</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        .device-ip-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+        }
+
+        .device-ip-card {
+            padding: 14px;
+            border: 1px solid #dbe3ed;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .device-ip-card p {
+            margin: 8px 0 0;
+            overflow-wrap: anywhere;
+        }
+
+        .fault-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .fault-counter {
+            padding: 9px 12px;
+            border-radius: 7px;
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .fault-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .fault-card {
+            padding: 16px;
+            border: 1px solid #fecaca;
+            border-left: 5px solid #b91c1c;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .fault-card.warning-fault {
+            border-color: #fed7aa;
+            border-left-color: #c2410c;
+        }
+
+        .fault-card.info-fault {
+            border-color: #bfdbfe;
+            border-left-color: #2563eb;
+        }
+
+        .fault-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .fault-heading h3 {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .fault-badge {
+            padding: 5px 9px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .fault-badge.warning {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .fault-badge.info {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .fault-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .fault-meta div {
+            padding: 9px;
+            background: #f8fafc;
+            border-radius: 6px;
+            overflow-wrap: anywhere;
+        }
+
+        .fault-meta strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .fault-card li {
+            margin: 6px 0;
+        }
+
+        .fault-empty {
+            padding: 18px;
+            border-radius: 8px;
+            background: #f0fdf4;
+            color: #166534;
+        }
+
+        .device-online {
+            color: #15803d;
+            font-weight: 700;
+        }
+
+        .device-offline {
+            color: #b91c1c;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <header class="header">
+        <div>
+            <h1>Water Level Management</h1>
+            <p>Version 5 — Master & Multi-Slave Control System</p>
+        </div>
+
+        <div class="connection-box">
+            <span id="masterStatus" class="status offline">MASTER OFFLINE</span>
+            <span id="slaveStatus" class="status offline">SLAVE 1 OFFLINE</span>
+            <span id="slave2Status" class="status offline">SLAVE 2 OFFLINE</span>
+        </div>
+    </header>
+
+    <section class="card">
+        <div class="section-title">
+            <h2>System Status</h2>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-item">
+                <span class="label">System State</span>
+                <span id="systemState" class="value">OFFLINE</span>
+            </div>
+
+            <div class="status-item">
+                <span class="label">Pump</span>
+                <span id="pumpState" class="value">OFF</span>
+            </div>
+
+            <div class="status-item">
+                <span class="label">Active Tank</span>
+                <span id="activeTank" class="value">-</span>
+            </div>
+
+            <div class="status-item">
+                <span class="label">Flask Server</span>
+                <span id="flaskState" class="value">CONNECTED</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-title">
+            <h2>ESP32 Network Status</h2>
+        </div>
+
+        <div class="device-ip-grid">
+            <div class="device-ip-card">
+                <strong>Master ESP32</strong>
+                <p>Status: <span id="masterDeviceState" class="device-offline">OFFLINE</span></p>
+                <p>IP Address: <strong id="masterIP">--</strong></p>
+                <p>Last Update: <span id="masterLastUpdate">--</span></p>
+            </div>
+
+            <div class="device-ip-card">
+                <strong>Slave 1 ESP32</strong>
+                <p>Status: <span id="slave1DeviceState" class="device-offline">OFFLINE</span></p>
+                <p>IP Address: <strong id="slave1IP">--</strong></p>
+                <p>Last Update: <span id="slave1LastUpdate">--</span></p>
+            </div>
+
+            <div class="device-ip-card">
+                <strong>Slave 2 ESP32</strong>
+                <p>Status: <span id="slave2DeviceState" class="device-offline">OFFLINE</span></p>
+                <p>IP Address: <strong id="slave2IP">--</strong></p>
+                <p>Last Update: <span id="slave2LastUpdate">--</span></p>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-title">
+            <h2>Tank Levels</h2>
+        </div>
+
+        <div class="tank-grid">
+            <div class="tank-card">
+                <div class="tank-header">
+                    <h3>Tank 1</h3>
+                    <span id="tank1Sensor" class="sensor offline">SENSOR</span>
+                </div>
+
+                <div class="tank-level">
+                    <div id="tank1Bar" class="level-bar" style="height: 0%;"></div>
+                    <span id="tank1Level" class="tank-percentage">0%</span>
+                </div>
+
+                <div class="tank-info">
+                    <span>Distance</span>
+                    <strong id="tank1Distance">-- cm</strong>
+                </div>
+            </div>
+
+            <div class="tank-card">
+                <div class="tank-header">
+                    <h3>Tank 2</h3>
+                    <span id="tank2Sensor" class="sensor offline">SENSOR</span>
+                </div>
+
+                <div class="tank-level">
+                    <div id="tank2Bar" class="level-bar" style="height: 0%;"></div>
+                    <span id="tank2Level" class="tank-percentage">0%</span>
+                </div>
+
+                <div class="tank-info">
+                    <span>Distance</span>
+                    <strong id="tank2Distance">-- cm</strong>
+                </div>
+            </div>
+
+            <div class="tank-card">
+                <div class="tank-header">
+                    <h3>Tank 3</h3>
+                    <span id="tank3Sensor" class="sensor offline">SENSOR</span>
+                </div>
+
+                <div class="tank-level">
+                    <div id="tank3Bar" class="level-bar" style="height: 0%;"></div>
+                    <span id="tank3Level" class="tank-percentage">0%</span>
+                </div>
+
+                <div class="tank-info">
+                    <span>Distance</span>
+                    <strong id="tank3Distance">-- cm</strong>
+                </div>
+            </div>
+
+            <div class="tank-card">
+                <div class="tank-header">
+                    <h3>Tank 4</h3>
+                    <span id="tank4Sensor" class="sensor offline">SENSOR</span>
+                </div>
+
+                <div class="tank-level">
+                    <div id="tank4Bar" class="level-bar" style="height: 0%;"></div>
+                    <span id="tank4Level" class="tank-percentage">0%</span>
+                </div>
+
+                <div class="tank-info">
+                    <span>Distance</span>
+                    <strong id="tank4Distance">-- cm</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-title">
+            <h2>Tank Selection</h2>
+            <span class="help-text" id="selectionSourceLabel">Source: PHYSICAL</span>
+        </div>
+
+        <div class="selection-grid">
+            <div class="selection-item">
+                <div>
+                    <strong>Tank 1 <span id="selectLabelS1" class="selection-state-badge off">OFF</span></strong>
+                    <small>Switch S1</small>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="selectS1" onchange="changeTankSelection(1)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="selection-item">
+                <div>
+                    <strong>Tank 2 <span id="selectLabelS2" class="selection-state-badge off">OFF</span></strong>
+                    <small>Switch S2</small>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="selectS2" onchange="changeTankSelection(2)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="selection-item">
+                <div>
+                    <strong>Tank 3 <span id="selectLabelS3" class="selection-state-badge off">OFF</span></strong>
+                    <small>Switch S3</small>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="selectS3" onchange="changeTankSelection(3)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="selection-item">
+                <div>
+                    <strong>Tank 4 <span id="selectLabelS4" class="selection-state-badge off">OFF</span></strong>
+                    <small>Switch S4</small>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="selectS4" onchange="changeTankSelection(4)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-title">
+            <h2>Valve Status</h2>
+        </div>
+
+        <div class="valve-grid">
+            <div class="valve-item" id="valveCard1">
+                <span class="valve-title">Valve 1 (Tank 1)</span>
+                <span id="valve1Badge" class="valve-badge closed">Close</span>
+            </div>
+
+            <div class="valve-item" id="valveCard2">
+                <span class="valve-title">Valve 2 (Tank 2)</span>
+                <span id="valve2Badge" class="valve-badge closed">Close</span>
+            </div>
+
+            <div class="valve-item" id="valveCard3">
+                <span class="valve-title">Valve 3 (Tank 3)</span>
+                <span id="valve3Badge" class="valve-badge closed">Close</span>
+            </div>
+
+            <div class="valve-item" id="valveCard4">
+                <span class="valve-title">Valve 4 (Tank 4)</span>
+                <span id="valve4Badge" class="valve-badge closed">Close</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-title">
+            <h2>System Faults and Troubleshooting</h2>
+            <button type="button" class="btn" style="min-width: 140px; min-height: 40px; font-size: 14px;" onclick="loadDashboard()">Refresh Faults</button>
+        </div>
+
+        <div class="fault-summary">
+            <div class="fault-counter">Active Faults: <span id="activeFaultCount">0</span></div>
+            <div class="fault-counter">Critical: <span id="criticalFaultCount">0</span></div>
+            <div class="fault-counter">Warnings: <span id="warningFaultCount">0</span></div>
+        </div>
+
+        <div id="faultList" class="fault-list">
+            <div class="fault-empty">Waiting for fault information from the ESP32 devices...</div>
+        </div>
+    </section>
+
+    <section class="card control-card">
+        <div class="section-title">
+            <h2>System Automation Control</h2>
+            <span class="help-text">Push to execute command</span>
+        </div>
+
+        <div class="control-buttons">
+            <button id="startButton" class="btn start" onclick="sendCommand('START')">
+                START FILLING
+            </button>
+
+            <button id="stopButton" class="btn stop" onclick="sendCommand('STOP')">
+                STOP ALL
+            </button>
+        </div>
+
+        <div id="commandMessage" class="command-message"></div>
+    </section>
+
+    <footer>
+        <span>Last update:</span>
+        <strong id="lastUpdate">--</strong>
+    </footer>
+</div>
+
+<script>
+let dashboardSelection = {
+    s1: false,
+    s2: false,
+    s3: false,
+    s4: false
+};
+
+let updatingDashboard = false;
+
+// ========================================================
+// UTILITY
+// ========================================================
+
+function setText(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+// ========================================================
+// TANK LEVEL
+// ========================================================
+
+function updateTank(tankNumber, tankData) {
+    if (!tankData) {
+        return;
+    }
+
+    let level = Number(tankData.level || 0);
+    if (level < 0) level = 0;
+    if (level > 100) level = 100;
+
+    setText(`tank${tankNumber}Level`, `${level}%`);
+    setText(
+        `tank${tankNumber}Distance`,
+        tankData.distance >= 0 ? `${tankData.distance} cm` : "-- cm"
+    );
+
+    const bar = document.getElementById(`tank${tankNumber}Bar`);
+    if (bar) {
+        bar.style.height = `${level}%`;
+    }
+
+    const sensor = document.getElementById(`tank${tankNumber}Sensor`);
+    if (sensor) {
+        if (tankData.sensor) {
+            sensor.textContent = "SENSOR OK";
+            sensor.classList.remove("offline");
+            sensor.classList.add("online");
+        } else {
+            sensor.textContent = "SENSOR ERROR";
+            sensor.classList.remove("online");
+            sensor.classList.add("offline");
+        }
+    }
+}
+
+// ========================================================
+// UPDATE TANK SELECTION (Item 1 & 2)
+// ========================================================
+
+function updateTankSelection(switches) {
+    if (!switches) {
+        return;
+    }
+
+    dashboardSelection = {
+        s1: !!switches.s1,
+        s2: !!switches.s2,
+        s3: !!switches.s3,
+        s4: !!switches.s4
+    };
+
+    const sourceLabel = document.getElementById("selectionSourceLabel");
+    if (sourceLabel) {
+        sourceLabel.textContent = "Source: " + (window.currentSelectionSource || "PHYSICAL");
+    }
+
+    for (let tank = 1; tank <= 4; tank++) {
+        const isSelected = !!dashboardSelection[`s${tank}`];
+        const switchElement = document.getElementById(`selectS${tank}`);
+        const labelElement = document.getElementById(`selectLabelS${tank}`);
+
+        if (labelElement) {
+            labelElement.textContent = isSelected ? "ON" : "OFF";
+            labelElement.className = "selection-state-badge " + (isSelected ? "on" : "off");
+        }
+
+        if (!updatingDashboard && switchElement) {
+            switchElement.checked = isSelected;
+        }
+    }
+}
+
+// ========================================================
+// VALVES STATUS
+// Text: Opening, Open, Closing, Close
+// ========================================================
+
+function updateValves(valves) {
+    if (!Array.isArray(valves)) {
+        return;
+    }
+
+    valves.forEach(function (valve) {
+        const id = Number(valve.id);
+        if (id < 1 || id > 4) return;
+
+        const rawState = String(valve.state || "CLOSED").toUpperCase();
+        const badge = document.getElementById(`valve${id}Badge`);
+
+        if (badge) {
+            let displayText = "Close";
+            let cssClass = "closed";
+
+            if (rawState === "OPENING") {
+                displayText = "Opening";
+                cssClass = "opening";
+            } else if (rawState === "OPEN") {
+                displayText = "Open";
+                cssClass = "open";
+            } else if (rawState === "CLOSING") {
+                displayText = "Closing";
+                cssClass = "closing";
+            } else if (rawState === "CLOSED" || rawState === "CLOSE") {
+                displayText = "Close";
+                cssClass = "closed";
+            } else if (rawState === "STOPPED") {
+                displayText = "Stopped";
+                cssClass = "stopped";
+            } else {
+                displayText = rawState;
+                cssClass = "error";
+            }
+
+            if (valve.error) {
+                displayText = "Error";
+                cssClass = "error";
+            }
+
+            badge.textContent = displayText;
+            badge.className = "valve-badge " + cssClass;
+        }
+    });
+}
+
+// ========================================================
+// DEVICE IP AND LAST-SEEN STATUS
+// ========================================================
+
+function formatDeviceTime(value) {
+    if (!value) {
+        return "No telemetry received";
+    }
+
+    let date;
+    if (typeof value === "number") {
+        date = new Date(value < 1000000000000 ? value * 1000 : value);
+    } else {
+        date = new Date(value);
+    }
+
+    return Number.isNaN(date.getTime()) ? "--" : date.toLocaleTimeString();
+}
+
+function updateDeviceCard(prefix, device) {
+    device = device || {};
+    const online = Boolean(device.online);
+    const state = document.getElementById(prefix + "DeviceState");
+
+    if (state) {
+        state.textContent = online ? "ONLINE" : "OFFLINE";
+        state.classList.toggle("device-online", online);
+        state.classList.toggle("device-offline", !online);
+    }
+
+    setText(prefix + "IP", device.ip || "--");
+    setText(prefix + "LastUpdate", formatDeviceTime(device.lastUpdate));
+}
+
+// ========================================================
+// FAULTS AND TROUBLESHOOTING
+// ========================================================
+
+function renderFaults(data) {
+    const container = document.getElementById("faultList");
+    if (!container) return;
+
+    const faults = Array.isArray(data.faults) ? data.faults : [];
+    const active = faults.filter(fault => fault && fault.active !== false);
+
+    const critical = active.filter(fault =>
+        ["critical", "error"].includes(String(fault.severity || "").toLowerCase())
+    );
+
+    const warnings = active.filter(fault =>
+        ["warning", "warn"].includes(String(fault.severity || "").toLowerCase())
+    );
+
+    setText("activeFaultCount", active.length);
+    setText("criticalFaultCount", critical.length);
+    setText("warningFaultCount", warnings.length);
+
+    container.replaceChildren();
+
+    if (!active.length) {
+        const empty = document.createElement("div");
+        empty.className = "fault-empty";
+        empty.textContent = "No active faults reported by the connected devices.";
+        container.appendChild(empty);
+        return;
+    }
+
+    active.sort((a, b) => {
+        const rank = { critical: 0, error: 1, warning: 2, warn: 2, info: 3 };
+        return (
+            (rank[String(a.severity || "warning").toLowerCase()] ?? 4) -
+            (rank[String(b.severity || "warning").toLowerCase()] ?? 4)
+        );
+    });
+
+    active.forEach(fault => {
+        const severity = String(fault.severity || "warning").toLowerCase();
+        const card = document.createElement("article");
+        card.className = "fault-card" +
+            (["warning", "warn"].includes(severity)
+                ? " warning-fault"
+                : severity === "info"
+                    ? " info-fault"
+                    : "");
+
+        const heading = document.createElement("div");
+        heading.className = "fault-heading";
+
+        const title = document.createElement("h3");
+        title.textContent = fault.message || fault.code || "Unspecified fault";
+
+        const badge = document.createElement("span");
+        badge.className = "fault-badge" +
+            (["warning", "warn"].includes(severity)
+                ? " warning"
+                : severity === "info"
+                    ? " info"
+                    : "");
+        badge.textContent = severity.toUpperCase();
+
+        heading.append(title, badge);
+        card.appendChild(heading);
+
+        const meta = document.createElement("div");
+        meta.className = "fault-meta";
+
+        [
+            ["Device", String(fault.device || "unknown").toUpperCase()],
+            ["Source", fault.source || fault.device || "unknown"],
+            ["Fault Code", fault.code || "UNKNOWN_FAULT"],
+            ["First Seen", formatDeviceTime(fault.first_seen)],
+            ["Last Seen", formatDeviceTime(fault.last_seen)]
+        ].forEach(pair => {
+            const item = document.createElement("div");
+            const label = document.createElement("strong");
+            const value = document.createElement("span");
+            label.textContent = pair[0];
+            value.textContent = pair[1];
+            item.append(label, value);
+            meta.appendChild(item);
+        });
+
+        card.appendChild(meta);
+
+        const causeTitle = document.createElement("strong");
+        causeTitle.textContent = "Possible Cause";
+        card.appendChild(causeTitle);
+
+        const cause = document.createElement("p");
+        cause.textContent = fault.cause || "Cause not provided by device.";
+        card.appendChild(cause);
+
+        const stepsTitle = document.createElement("strong");
+        stepsTitle.textContent = "Troubleshooting Steps";
+        card.appendChild(stepsTitle);
+
+        const steps = Array.isArray(fault.steps) ? fault.steps : [];
+        if (steps.length) {
+            const list = document.createElement("ol");
+            steps.forEach(step => {
+                const li = document.createElement("li");
+                li.textContent = String(step);
+                list.appendChild(li);
+            });
+            card.appendChild(list);
+        } else {
+            const noSteps = document.createElement("p");
+            noSteps.textContent = "No troubleshooting steps were supplied by the device.";
+            card.appendChild(noSteps);
+        }
+
+        container.appendChild(card);
+    });
+}
+
+// ========================================================
+// MASTER / SLAVE STATUS
+// ========================================================
+
+function updateConnectionStatus(data) {
+    const master = document.getElementById("masterStatus");
+    const slave = document.getElementById("slaveStatus");
+
+    if (data.master && data.master.online) {
+        master.textContent = "MASTER ONLINE";
+        master.classList.remove("offline");
+        master.classList.add("online");
+    } else {
+        master.textContent = "MASTER OFFLINE";
+        master.classList.remove("online");
+        master.classList.add("offline");
+    }
+
+    const slave1Online = data.slave1
+        ? Boolean(data.slave1.online)
+        : Boolean(data.slave && data.slave.online);
+
+    const slave2Online = Boolean(data.slave2 && data.slave2.online);
+
+    if (slave1Online) {
+        slave.textContent = "SLAVE 1 ONLINE";
+        slave.classList.remove("offline");
+        slave.classList.add("online");
+    } else {
+        slave.textContent = "SLAVE 1 OFFLINE";
+        slave.classList.remove("online");
+        slave.classList.add("offline");
+    }
+
+    const slave2 = document.getElementById("slave2Status");
+    if (slave2) {
+        slave2.textContent = slave2Online ? "SLAVE 2 ONLINE" : "SLAVE 2 OFFLINE";
+        slave2.classList.toggle("online", slave2Online);
+        slave2.classList.toggle("offline", !slave2Online);
+    }
+
+    updateDeviceCard("master", data.master || {});
+    updateDeviceCard("slave1", data.slave1 || data.slave || {});
+    updateDeviceCard("slave2", data.slave2 || {});
+}
+
+// ========================================================
+// SYSTEM DATA
+// ========================================================
+
+function updateSystem(data) {
+    const controller = data.controller || {};
+    const pump = data.pump || {};
+
+    setText("systemState", controller.state || "OFFLINE");
+    setText("activeTank", controller.activeTank ? `Tank ${controller.activeTank}` : "-");
+    setText("pumpState", pump.running ? "ON" : "OFF");
+
+    setText(
+        "flaskState",
+        data.system && data.system.flaskConnected === false
+            ? "DISCONNECTED"
+            : "CONNECTED"
+    );
+
+    const startBtn = document.getElementById("startButton");
+    const stopBtn = document.getElementById("stopButton");
+
+    if (startBtn && stopBtn) {
+        const isRunning = controller.cycleRunning || pump.running;
+        startBtn.classList.toggle("active-cmd", isRunning);
+        stopBtn.classList.toggle("active-cmd", !isRunning && controller.state === "STOPPED");
+    }
+}
+
+// ========================================================
+// LAST UPDATE
+// ========================================================
+
+function updateLastUpdate() {
+    setText("lastUpdate", new Date().toLocaleTimeString());
+}
+
+// ========================================================
+// LOAD DASHBOARD
+// ========================================================
+
+async function loadDashboard() {
+    try {
+        const response = await fetch("/api/dashboard", {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error("Dashboard request failed");
+        }
+
+        const data = await response.json();
+
+        updateConnectionStatus(data);
+        renderFaults(data);
+        updateSystem(data);
+
+        updateTank(1, data.tank1);
+        updateTank(2, data.tank2);
+        updateTank(3, data.tank3);
+        updateTank(4, data.tank4);
+
+        window.currentSelectionSource = data.selectionSource || "PHYSICAL";
+
+        updateTankSelection(data.switches);
+        updateValves(data.valves);
+        updateLastUpdate();
+
+    } catch (error) {
+        console.error("Dashboard error:", error);
+    }
+}
+
+// ========================================================
+// CHANGE TANK SELECTION (Item 3)
+// ========================================================
+
+async function changeTankSelection(tank) {
+    if (updatingDashboard) return;
+
+    updatingDashboard = true;
+
+    try {
+        const switchId = `selectS${tank}`;
+        const element = document.getElementById(switchId);
+        const value = element.checked;
+
+        dashboardSelection[`s${tank}`] = value;
+
+        // Immediate visual update of ON / OFF badge
+        const labelElement = document.getElementById(`selectLabelS${tank}`);
+        if (labelElement) {
+            labelElement.textContent = value ? "ON" : "OFF";
+            labelElement.className = "selection-state-badge " + (value ? "on" : "off");
+        }
+
+        const response = await fetch("/api/control", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                tankSelection: dashboardSelection
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || "Selection update failed");
+        }
+
+        updateTankSelection(result.tankSelection);
+        showCommandMessage(`Tank ${tank} set to ${value ? 'ON' : 'OFF'}`);
+
+    } catch (error) {
+        console.error("Selection error:", error);
+        showCommandMessage("Selection update failed");
+        await loadDashboard();
+
+    } finally {
+        updatingDashboard = false;
+    }
+}
+
+// ========================================================
+// SEND START / STOP COMMAND (Item 4)
+// ========================================================
+
+async function sendCommand(command) {
+    const message = document.getElementById("commandMessage");
+
+    try {
+        const response = await fetch("/api/control", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                command: command
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || "Command failed");
+        }
+
+        if (command === "START") {
+            showCommandMessage("START command sent to Master");
+        } else {
+            showCommandMessage("STOP ALL command sent");
+        }
+
+        await loadDashboard();
+
+    } catch (error) {
+        console.error("Command error:", error);
+        if (message) {
+            message.textContent = "Command failed";
+        }
+    }
+}
+
+// ========================================================
+// COMMAND MESSAGE
+// ========================================================
+
+function showCommandMessage(message) {
+    const element = document.getElementById("commandMessage");
+    if (!element) return;
+
+    element.textContent = message;
+    setTimeout(function () {
+        element.textContent = "";
+    }, 2500);
+}
+
+// ========================================================
+// START DASHBOARD
+// ========================================================
+
+loadDashboard();
+
+// ========================================================
+// CONTINUOUS MONITORING
+// ========================================================
+
+setInterval(loadDashboard, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#0284C7</color>
+    <color name="primary_dark">#0369A1</color>
+    <color name="accent">#0EA5E9</color>
+
+    <color name="background">#F1F5F9</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="card_border">#E2E8F0</color>
+
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_muted">#94A3B8</color>
+
+    <!-- Water & Tank Colors -->
+    <color name="tank_fill_normal">#0284C7</color>
+    <color name="tank_fill_full">#16A34A</color>
+    <color name="tank_fill_low">#D97706</color>
+    <color name="tank_track">#E2E8F0</color>
+
+    <!-- Valve Badge Colors (Exact match to Dashboard) -->
+    <color name="valve_close_bg">#F1F5F9</color>
+    <color name="valve_close_text">#475569</color>
+    <color name="valve_close_border">#CBD5E1</color>
+
+    <color name="valve_opening_bg">#FEF3C7</color>
+    <color name="valve_opening_text">#B45309</color>
+    <color name="valve_opening_border">#FDE68A</color>
+
+    <color name="valve_open_bg">#DCFCE7</color>
+    <color name="valve_open_text">#15803D</color>
+    <color name="valve_open_border">#BBF7D0</color>
+
+    <color name="valve_closing_bg">#E0E7FF</color>
+    <color name="valve_closing_text">#4338CA</color>
+    <color name="valve_closing_border">#C7D2FE</color>
+
+    <color name="valve_error_bg">#FEE2E2</color>
+    <color name="valve_error_text">#B91C1C</color>
+    <color name="valve_error_border">#FECACA</color>
+
+    <!-- Actions -->
+    <color name="btn_start">#16A34A</color>
+    <color name="btn_stop">#DC2626</color>
+    <color name="status_online">#16A34A</color>
+    <color name="status_offline">#DC2626</color>
+</resources>
+
